@@ -19,11 +19,11 @@ interface TriggerEventDetail {
 }
 
 export default function FloatingPanel() {
-  const { settings, addHistoryItem } = useStore();
+  const { settings, updateSettings, addHistoryItem } = useStore();
   
   // UI states
   const [isOpen, setIsOpen] = useState(false);
-  const [position, setPosition] = useState({ top: 0, left: 0, width: 0 });
+  const [position, setPosition] = useState({ top: 0, left: 0, width: 500 }); // Default size set to 500px
   const [activeInput, setActiveInput] = useState<HTMLElement | null>(null);
   
   // Generation parameters
@@ -38,6 +38,11 @@ export default function FloatingPanel() {
   const [inserted, setInserted] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [extractedData, setExtractedData] = useState<ExtractedPostData | null>(null);
+
+  // Dragging states
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStart = useRef({ x: 0, y: 0 });
+  const panelStart = useRef({ top: 0, left: 0 });
 
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -55,11 +60,20 @@ export default function FloatingPanel() {
       const { inputElement, rect } = customEvent.detail;
       
       setActiveInput(inputElement);
-      // Place the panel 8px below the editor input box
+
+      // Determine starting coordinate relative to viewport (fixed layout)
+      const viewportTop = rect.top + rect.height + 8 - window.scrollY;
+      const viewportLeft = Math.max(16, rect.left - window.scrollX);
+
+      // Load position from store settings if user has previously dragged it.
+      // Otherwise, position it inline relative to the comment box.
+      const initialTop = settings?.savedPosition?.top ?? viewportTop;
+      const initialLeft = settings?.savedPosition?.left ?? viewportLeft;
+
       setPosition({
-        top: rect.top + rect.height + 8,
-        left: rect.left,
-        width: Math.max(rect.width, 380) // Minimum width of 380px
+        top: initialTop,
+        left: initialLeft,
+        width: 500 // Expanded layout width
       });
       setIsOpen(true);
       
@@ -82,14 +96,13 @@ export default function FloatingPanel() {
     return () => {
       window.removeEventListener('linkedin-ai-trigger-panel', handleTrigger);
     };
-  }, []);
+  }, [settings]);
 
   // Close panel on clicking outside the panel
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
-      if (!isOpen || !panelRef.current) return;
+      if (!isOpen || !panelRef.current || isDragging) return;
       
-      // Check if click was outside the panel AND not on the active input or the trigger button
       const path = e.composedPath();
       if (!path.includes(panelRef.current) && (!activeInput || !path.includes(activeInput))) {
         setIsOpen(false);
@@ -100,7 +113,56 @@ export default function FloatingPanel() {
     return () => {
       document.removeEventListener('mousedown', handleOutsideClick);
     };
-  }, [isOpen, activeInput]);
+  }, [isOpen, activeInput, isDragging]);
+
+  // Dragging event listener attachment
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging) return;
+      
+      const dx = e.clientX - dragStart.current.x;
+      const dy = e.clientY - dragStart.current.y;
+      
+      const newTop = Math.max(10, Math.min(window.innerHeight - 300, panelStart.current.top + dy));
+      const newLeft = Math.max(10, Math.min(window.innerWidth - 300, panelStart.current.left + dx));
+      
+      setPosition({
+        top: newTop,
+        left: newLeft,
+        width: position.width
+      });
+
+      updateSettings({
+        savedPosition: { top: newTop, left: newLeft }
+      });
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging, position.width, updateSettings]);
+
+  // Initialize drag action on header mousedown
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return; // Left click only
+    const target = e.target as HTMLElement;
+    if (target.closest('button') || target.closest('input')) return; // Avoid drag on button clicks
+
+    setIsDragging(true);
+    dragStart.current = { x: e.clientX, y: e.clientY };
+    panelStart.current = { top: position.top, left: position.left };
+    e.preventDefault();
+  };
 
   // Handle key validation & comment generation
   const handleGenerate = async () => {
@@ -121,7 +183,6 @@ export default function FloatingPanel() {
     setCopied(false);
 
     try {
-      // Proxy call through background service worker to bypass LinkedIn's strict CSP / CORS rules
       const response = await chrome.runtime.sendMessage({
         type: 'generate-comment',
         payload: {
@@ -165,17 +226,15 @@ export default function FloatingPanel() {
 
     try {
       activeInput.focus();
-      // Select everything and replace
       document.execCommand('selectAll', false, undefined);
       document.execCommand('delete', false, undefined);
       document.execCommand('insertText', false, generatedComment);
       
-      // Dispatch standard input events so React / Quill model notices the text change
       activeInput.dispatchEvent(new Event('input', { bubbles: true }));
       activeInput.dispatchEvent(new Event('change', { bubbles: true }));
       
       setInserted(true);
-      setTimeout(() => setIsOpen(false), 800); // Auto close panel shortly after insert
+      setTimeout(() => setIsOpen(false), 800);
     } catch (err) {
       console.error('Failed to insert comment:', err);
       setError('Could not automatically insert text. Please copy and paste manually.');
@@ -203,18 +262,23 @@ export default function FloatingPanel() {
     <div
       ref={panelRef}
       style={{
-        position: 'absolute',
+        position: 'fixed', // Fixed positioning anchors widget relative to the viewport
         top: position.top,
         left: position.left,
-        width: position.width,
-        maxWidth: '550px',
-        pointerEvents: 'auto'
+        width: `${position.width}px`,
+        maxWidth: '90vw',
+        pointerEvents: 'auto',
+        zIndex: 999999
       }}
-      className={`rounded-2xl shadow-2xl overflow-hidden font-sans border border-slate-200/20 glass ${themeClass}`}
+      className={`rounded-2xl shadow-2xl overflow-hidden font-sans border border-slate-200/20 glass ${themeClass} ${isDragging ? 'select-none' : ''}`}
     >
       <div className="p-4 flex flex-col gap-4">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-200/10 pb-2">
+        {/* Draggable Header */}
+        <div 
+          onMouseDown={handleMouseDown}
+          className="flex items-center justify-between border-b border-slate-200/10 pb-2 cursor-move hover:bg-slate-200/5 p-1 rounded-lg transition-colors select-none"
+          title="Drag to reposition"
+        >
           <div className="flex items-center gap-2">
             <div className="p-1 rounded bg-indigo-600 text-white">
               <Sparkles size={16} />
@@ -330,7 +394,7 @@ export default function FloatingPanel() {
               <textarea
                 value={generatedComment}
                 onChange={(e) => setGeneratedComment(e.target.value)}
-                rows={4}
+                rows={5} // Expanded text area
                 className="w-full px-3 py-2 rounded-xl border border-slate-200/10 bg-slate-200/5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 resize-y transition-colors font-sans leading-relaxed"
               />
               <div className="flex gap-2 justify-end">

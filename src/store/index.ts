@@ -52,6 +52,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   theme: 'system',
   temperature: 0.7,
   maxTokens: 1000,
+  savedPosition: undefined,
 };
 
 export const useStore = create<AppState>()(
@@ -103,7 +104,7 @@ export const useStore = create<AppState>()(
       resetSettings: () => set({ settings: { ...DEFAULT_SETTINGS } }),
     }),
     {
-      name: 'linkedin-ai-comment-assistant-storage-v2', // Updated key to force refresh
+      name: 'linkedin-ai-comment-assistant-storage-v3', // Updated key to force refresh
       storage: createJSONStorage(() => chromeStorageAdapter),
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);

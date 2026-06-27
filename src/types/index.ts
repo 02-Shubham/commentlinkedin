@@ -32,6 +32,7 @@ export interface AppSettings {
   theme: 'light' | 'dark' | 'system';
   temperature: number;
   maxTokens: number;
+  savedPosition?: { top: number; left: number };
 }
 
 export interface GenerateRequest {
