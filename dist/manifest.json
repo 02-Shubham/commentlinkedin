@@ -1,0 +1,42 @@
+{
+  "manifest_version": 3,
+  "name": "LinkedIn AI Comment Assistant",
+  "version": "1.0.0",
+  "description": "Enhance your LinkedIn commenting experience using AI. Not an automation or auto-posting tool.",
+  "permissions": [
+    "storage",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://*.linkedin.com/*"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "options_page": "options.html",
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.linkedin.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "content.css"
+      ],
+      "matches": [
+        "https://*.linkedin.com/*"
+      ]
+    }
+  ]
+}
