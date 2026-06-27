@@ -23,7 +23,7 @@ export default function FloatingPanel() {
   
   // UI states
   const [isOpen, setIsOpen] = useState(false);
-  const [position, setPosition] = useState({ top: 0, left: 0, width: 500 }); // Default size set to 500px
+  const [position, setPosition] = useState({ top: 0, left: 0, width: 400 }); // Expanded default size to 550px
   const [activeInput, setActiveInput] = useState<HTMLElement | null>(null);
   
   // Generation parameters
@@ -61,19 +61,25 @@ export default function FloatingPanel() {
       
       setActiveInput(inputElement);
 
+      const panelWidth = 550;
+      const panelHeight = panelRef.current ? panelRef.current.offsetHeight : 380;
+
       // Determine starting coordinate relative to viewport (fixed layout)
       const viewportTop = rect.top + rect.height + 8 - window.scrollY;
       const viewportLeft = Math.max(16, rect.left - window.scrollX);
 
       // Load position from store settings if user has previously dragged it.
-      // Otherwise, position it inline relative to the comment box.
-      const initialTop = settings?.savedPosition?.top ?? viewportTop;
-      const initialLeft = settings?.savedPosition?.left ?? viewportLeft;
+      let initialTop = settings?.savedPosition?.top ?? viewportTop;
+      let initialLeft = settings?.savedPosition?.left ?? viewportLeft;
+
+      // Clamp initial coordinates to ensure it stays inside Chrome window boundaries
+      initialTop = Math.max(10, Math.min(window.innerHeight - panelHeight - 10, initialTop));
+      initialLeft = Math.max(10, Math.min(window.innerWidth - panelWidth - 10, initialLeft));
 
       setPosition({
         top: initialTop,
         left: initialLeft,
-        width: 500 // Expanded layout width
+        width: panelWidth
       });
       setIsOpen(true);
       
@@ -115,7 +121,7 @@ export default function FloatingPanel() {
     };
   }, [isOpen, activeInput, isDragging]);
 
-  // Dragging event listener attachment
+  // Dragging event listener attachment with window boundary constraints
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isDragging) return;
@@ -123,13 +129,17 @@ export default function FloatingPanel() {
       const dx = e.clientX - dragStart.current.x;
       const dy = e.clientY - dragStart.current.y;
       
-      const newTop = Math.max(10, Math.min(window.innerHeight - 300, panelStart.current.top + dy));
-      const newLeft = Math.max(10, Math.min(window.innerWidth - 300, panelStart.current.left + dx));
+      const panelHeight = panelRef.current ? panelRef.current.offsetHeight : 380;
+      const panelWidth = position.width;
+
+      // Clamp coords so widget remains fully visible inside Chrome window
+      const newTop = Math.max(10, Math.min(window.innerHeight - panelHeight - 10, panelStart.current.top + dy));
+      const newLeft = Math.max(10, Math.min(window.innerWidth - panelWidth - 10, panelStart.current.left + dx));
       
       setPosition({
         top: newTop,
         left: newLeft,
-        width: position.width
+        width: panelWidth
       });
 
       updateSettings({
@@ -283,7 +293,7 @@ export default function FloatingPanel() {
             <div className="p-1 rounded bg-indigo-600 text-white">
               <Sparkles size={16} />
             </div>
-            <span className="font-semibold text-sm tracking-wide">AI Comment Assistant</span>
+            <span className="font-semibold text-[12px] tracking-wide">AI Comment Assistant</span>
           </div>
           <button 
             onClick={() => setIsOpen(false)}
@@ -296,13 +306,13 @@ export default function FloatingPanel() {
         {/* Spacing & Length */}
         <div className="grid grid-cols-2 gap-4">
           <div className="flex flex-col gap-1.5">
-            <span className="text-[11px] font-medium tracking-wider text-slate-400 uppercase">Length</span>
+            <span className="text-[12px] font-medium tracking-wider text-slate-400 uppercase">Length</span>
             <div className="flex bg-slate-200/10 p-0.5 rounded-lg border border-slate-200/5">
               {(['short', 'medium', 'long'] as CommentLength[]).map((l) => (
                 <button
                   key={l}
                   onClick={() => setSelectedLength(l)}
-                  className={`flex-1 py-1 rounded text-xs font-medium capitalize transition-all ${
+                  className={`flex-1 py-1 rounded text-[22px] font-medium capitalize transition-all ${
                     selectedLength === l
                       ? 'bg-indigo-600 text-white shadow'
                       : 'text-slate-300 hover:bg-slate-200/5'
@@ -369,7 +379,7 @@ export default function FloatingPanel() {
           <button
             onClick={handleGenerate}
             disabled={loading}
-            className="w-full py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50 text-white font-medium text-xs tracking-wide shadow-lg flex items-center justify-center gap-1.5 transition-all transform active:scale-98"
+            className="w-full py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50 text-white font-medium text-[20px] tracking-wide shadow-lg flex items-center justify-center gap-1.5 transition-all transform active:scale-98"
           >
             {loading ? (
               <RotateCw size={14} className="animate-spin" />
