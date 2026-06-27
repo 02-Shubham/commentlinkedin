@@ -115,22 +115,6 @@ export default function FloatingPanel() {
     };
   }, [settings]);
 
-  // Close panel on clicking outside the panel
-  useEffect(() => {
-    const handleOutsideClick = (e: MouseEvent) => {
-      if (!isOpen || !panelRef.current || isDragging) return;
-      
-      const path = e.composedPath();
-      if (!path.includes(panelRef.current) && (!activeInput || !path.includes(activeInput))) {
-        setIsOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleOutsideClick);
-    return () => {
-      document.removeEventListener('mousedown', handleOutsideClick);
-    };
-  }, [isOpen, activeInput, isDragging]);
 
   // Dragging event listener attachment with window boundary constraints
   useEffect(() => {
@@ -282,10 +266,11 @@ export default function FloatingPanel() {
   if (!isOpen) return null;
 
   // STRICT LIGHT THEME FOR THE FLOATING PANEL
+  // STRICT LIGHT THEME FOR THE FLOATING PANEL
   // background: white (#ffffff)
   // borders: light grey (#e0e0e0)
   // text: LinkedIn charcoal charcoal (#191919)
-  const themeClass = 'bg-[#ffffff] text-[#191919] border-[#e0e0e0] shadow-slate-300/50';
+  const themeClass = 'bg-[#ffffff] text-[#191919] border-[#e0e0e0] shadow-[0_12px_36px_rgba(0,0,0,0.15)]';
   const secondaryTextClass = 'text-[#5e5e5e]';
   const dividerClass = 'border-[#e0e0e0]';
 
@@ -302,7 +287,7 @@ export default function FloatingPanel() {
         zIndex: 999999,
         fontFamily: "'Plus Jakarta Sans', -apple-system, system-ui, BlinkMacSystemFont, sans-serif"
       }}
-      className={`rounded-md border shadow-2xl overflow-hidden transition-shadow duration-200 ${themeClass} ${isDragging ? 'select-none shadow-2xl scale-[1.01]' : ''}`}
+      className={`rounded-md border overflow-hidden transition-shadow duration-200 ${themeClass} ${isDragging ? 'select-none scale-[1.01]' : ''}`}
     >
       <div className="p-5 flex flex-col gap-5">
         

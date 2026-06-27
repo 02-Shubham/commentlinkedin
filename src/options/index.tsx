@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { 
   Sparkles, Key, Sliders, History, Trash2, CheckCircle, 
-  XCircle, Save, Eye, EyeOff, Moon, Sun, Monitor
+  XCircle, Eye, EyeOff, Moon, Sun, Monitor
 } from 'lucide-react';
 import { useStore } from '../store';
 import { PROVIDERS_INFO, testProviderConnection } from '../services/providers';
@@ -98,8 +98,6 @@ function OptionsApp() {
   const toggleShowKey = (provider: AIProviderName) => {
     setShowKey(prev => ({ ...prev, [provider]: !prev[provider] }));
   };
-
-  const isDark = settings.theme === 'dark' || (settings.theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
   return (
     <div 

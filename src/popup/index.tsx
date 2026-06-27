@@ -1,23 +1,34 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Sparkles, Settings, History, Check } from 'lucide-react';
+import { Sparkles, Settings, Check } from 'lucide-react';
 import { useStore } from '../store';
 import '../styles/index.css';
 
 function PopupApp() {
   const { settings, history, hasHydrated } = useStore();
 
+  // Dynamic Google Font Injection
   useEffect(() => {
-    // Setup body classes based on theme settings
+    if (!document.getElementById('plus-jakarta-sans-font')) {
+      const link = document.createElement('link');
+      link.id = 'plus-jakarta-sans-font';
+      link.rel = 'stylesheet';
+      link.href = 'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap';
+      document.head.appendChild(link);
+    }
+  }, []);
+
+  // Sync background classes for extension popup
+  useEffect(() => {
     const isDark = settings.theme === 'dark' || 
       (settings.theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
     
     if (isDark) {
       document.body.classList.add('dark');
-      document.body.style.backgroundColor = '#020617';
+      document.body.style.backgroundColor = '#1d2226'; // LinkedIn dark theme canvas
     } else {
       document.body.classList.remove('dark');
-      document.body.style.backgroundColor = '#ffffff';
+      document.body.style.backgroundColor = '#f4f2ee'; // LinkedIn light theme canvas
     }
   }, [settings.theme, hasHydrated]);
 
@@ -37,64 +48,81 @@ function PopupApp() {
     );
   }
 
+  const isDark = settings.theme === 'dark' || (settings.theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+
   return (
-    <div className="p-4 flex flex-col gap-4 font-sans text-slate-800 dark:text-slate-100 min-h-[300px]">
+    <div 
+      style={{ 
+        width: '280px', 
+        fontFamily: "'Plus Jakarta Sans', -apple-system, system-ui, BlinkMacSystemFont, sans-serif" 
+      }}
+      className="p-4 flex flex-col gap-4 text-[#191919] dark:text-[#ffffff] antialiased"
+    >
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-slate-200/10 pb-3">
+      <div className="flex items-center justify-between border-b border-slate-200 dark:border-[#38434f] pb-3">
         <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded bg-indigo-600 text-white">
-            <Sparkles size={18} />
-          </div>
-          <span className="font-bold text-base tracking-wide bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
+          <Sparkles size={18} className={isDark ? 'text-[#70b5f9]' : 'text-[#0a66c2]'} />
+          <span className="font-bold text-sm tracking-wide text-[#0a66c2] dark:text-[#70b5f9]">
             AI Comment Assistant
           </span>
         </div>
         <button 
           onClick={openSettings}
-          className="p-1.5 rounded-lg border border-slate-200/10 bg-slate-200/5 hover:bg-indigo-600 hover:text-white transition-all"
+          className={`p-1.5 rounded-md border transition-all ${
+            isDark 
+              ? 'border-[#38434f] bg-[#1d2226] hover:bg-[#ffffff10] text-[#ffffff99]' 
+              : 'border-slate-200 bg-white hover:bg-slate-50 text-[#5e5e5e]'
+          }`}
           title="Open Settings"
         >
-          <Settings size={16} />
+          <Settings size={14} />
         </button>
       </div>
 
       {/* Connection status card */}
-      <div className="p-3.5 rounded-xl border border-slate-200/10 bg-slate-200/5 flex flex-col gap-2">
-        <span className="text-[11px] font-medium uppercase tracking-wider text-slate-400">Active Provider</span>
+      <div className={`p-3 rounded-md border flex flex-col gap-1.5 ${
+        isDark ? 'border-[#38434f] bg-[#121619]/40' : 'border-slate-200 bg-white shadow-sm'
+      }`}>
+        <span className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-[#ffffffb3]' : 'text-[#5e5e5e]'}`}>Active Provider</span>
         <div className="flex items-center justify-between">
-          <span className="font-semibold text-sm capitalize">{settings.selectedProvider}</span>
-          <div className="flex items-center gap-1 text-[11px] text-green-400 font-medium">
+          <span className="font-bold text-xs capitalize">{settings.selectedProvider}</span>
+          <div className="flex items-center gap-1 text-[10px] text-green-500 font-bold">
             <Check size={12} /> Ready
           </div>
         </div>
-        <span className="text-[10px] text-slate-400 font-mono mt-1">
+        <span className="text-[9px] text-slate-400 font-mono mt-0.5">
           Model: {settings.providers[settings.selectedProvider]?.model}
         </span>
       </div>
 
       {/* Quick stats */}
       <div className="grid grid-cols-2 gap-3">
-        <div className="p-3 rounded-xl border border-slate-200/10 bg-slate-200/5 flex flex-col gap-1">
-          <span className="text-[10px] font-medium text-slate-400 uppercase">Comments Generated</span>
-          <span className="text-xl font-bold">{history.length}</span>
+        <div className={`p-3 rounded-md border flex flex-col gap-1 ${
+          isDark ? 'border-[#38434f] bg-[#121619]/40' : 'border-slate-200 bg-white shadow-sm'
+        }`}>
+          <span className={`text-[9px] font-bold uppercase ${isDark ? 'text-[#ffffffb3]' : 'text-[#5e5e5e]'}`}>Generated</span>
+          <span className="text-lg font-bold">{history.length}</span>
         </div>
-        <div className="p-3 rounded-xl border border-slate-200/10 bg-slate-200/5 flex flex-col gap-1">
-          <span className="text-[10px] font-medium text-slate-400 uppercase">Default Tone</span>
-          <span className="text-sm font-semibold capitalize mt-0.5">{settings.defaultTone}</span>
+        <div className={`p-3 rounded-md border flex flex-col gap-1 ${
+          isDark ? 'border-[#38434f] bg-[#121619]/40' : 'border-slate-200 bg-white shadow-sm'
+        }`}>
+          <span className={`text-[9px] font-bold uppercase ${isDark ? 'text-[#ffffffb3]' : 'text-[#5e5e5e]'}`}>Length</span>
+          <span className="text-xs font-semibold capitalize mt-0.5">{settings.defaultLength}</span>
         </div>
       </div>
 
       {/* Quick Actions */}
-      <div className="mt-2 flex flex-col gap-2">
+      <div className="mt-1 flex flex-col gap-2">
         <button
           onClick={openSettings}
-          className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs tracking-wide shadow flex items-center justify-center gap-1.5 transition-all"
+          className={`w-full py-2 rounded-md font-bold text-xs shadow-sm transition-all flex items-center justify-center gap-1.5 active:scale-98 ${
+            isDark 
+              ? 'bg-[#70b5f9] text-[#1d2226] hover:bg-[#a0d1ff]' 
+              : 'bg-[#0a66c2] text-[#ffffff] hover:bg-[#004182]'
+          }`}
         >
-          Manage API Keys & Config
+          <Settings size={14} /> Open Settings
         </button>
-        <span className="text-[10px] text-center text-slate-400 block mt-2">
-          Open a LinkedIn post and click the ✨ icon inside any comment box to write.
-        </span>
       </div>
     </div>
   );
