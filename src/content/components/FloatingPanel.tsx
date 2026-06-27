@@ -23,7 +23,7 @@ export default function FloatingPanel() {
   
   // UI states
   const [isOpen, setIsOpen] = useState(false);
-  const [position, setPosition] = useState({ top: 0, left: 0, width: 400 }); // Expanded default size to 550px
+  const [position, setPosition] = useState({ top: 0, left: 0, width: 400 });
   const [activeInput, setActiveInput] = useState<HTMLElement | null>(null);
   
   // Generation parameters
@@ -46,6 +46,17 @@ export default function FloatingPanel() {
 
   const panelRef = useRef<HTMLDivElement>(null);
 
+  // Dynamic Google Font Injection
+  useEffect(() => {
+    if (!document.getElementById('plus-jakarta-sans-font')) {
+      const link = document.createElement('link');
+      link.id = 'plus-jakarta-sans-font';
+      link.rel = 'stylesheet';
+      link.href = 'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap';
+      document.head.appendChild(link);
+    }
+  }, []);
+
   // Sync defaults from store settings once loaded
   useEffect(() => {
     if (settings) {
@@ -61,8 +72,8 @@ export default function FloatingPanel() {
       
       setActiveInput(inputElement);
 
-      const panelWidth = 550;
-      const panelHeight = panelRef.current ? panelRef.current.offsetHeight : 380;
+      const panelWidth = 400;
+      const panelHeight = panelRef.current ? panelRef.current.offsetHeight : 450;
 
       // Determine starting coordinate relative to viewport (fixed layout)
       const viewportTop = rect.top + rect.height + 8 - window.scrollY;
@@ -129,7 +140,7 @@ export default function FloatingPanel() {
       const dx = e.clientX - dragStart.current.x;
       const dy = e.clientY - dragStart.current.y;
       
-      const panelHeight = panelRef.current ? panelRef.current.offsetHeight : 380;
+      const panelHeight = panelRef.current ? panelRef.current.offsetHeight : 450;
       const panelWidth = position.width;
 
       // Clamp coords so widget remains fully visible inside Chrome window
@@ -264,58 +275,62 @@ export default function FloatingPanel() {
 
   if (!isOpen) return null;
 
-  // Determine theme mode classes
-  const isDark = settings.theme === 'dark' || (settings.theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-  const themeClass = isDark ? 'dark bg-slate-950 text-slate-100' : 'bg-white text-slate-800';
+  // STRICT LIGHT THEME FOR THE FLOATING PANEL
+  // background: white (#ffffff)
+  // borders: light grey (#e0e0e0)
+  // text: LinkedIn charcoal charcoal (#191919)
+  const themeClass = 'bg-[#ffffff] text-[#191919] border-[#e0e0e0] shadow-slate-300/50';
+  const secondaryTextClass = 'text-[#5e5e5e]';
+  const dividerClass = 'border-[#e0e0e0]';
 
   return (
     <div
       ref={panelRef}
       style={{
-        position: 'fixed', // Fixed positioning anchors widget relative to the viewport
+        position: 'fixed',
         top: position.top,
         left: position.left,
         width: `${position.width}px`,
         maxWidth: '90vw',
         pointerEvents: 'auto',
-        zIndex: 999999
+        zIndex: 999999,
+        fontFamily: "'Plus Jakarta Sans', -apple-system, system-ui, BlinkMacSystemFont, sans-serif"
       }}
-      className={`rounded-2xl shadow-2xl overflow-hidden font-sans border border-slate-200/20 glass ${themeClass} ${isDragging ? 'select-none' : ''}`}
+      className={`rounded-md border shadow-2xl overflow-hidden transition-shadow duration-200 ${themeClass} ${isDragging ? 'select-none shadow-2xl scale-[1.01]' : ''}`}
     >
-      <div className="p-4 flex flex-col gap-4">
+      <div className="p-5 flex flex-col gap-5">
+        
         {/* Draggable Header */}
         <div 
           onMouseDown={handleMouseDown}
-          className="flex items-center justify-between border-b border-slate-200/10 pb-2 cursor-move hover:bg-slate-200/5 p-1 rounded-lg transition-colors select-none"
+          className={`flex items-center justify-between border-b pb-3 cursor-move select-none ${dividerClass}`}
           title="Drag to reposition"
         >
-          <div className="flex items-center gap-2">
-            <div className="p-1 rounded bg-indigo-600 text-white">
-              <Sparkles size={16} />
-            </div>
-            <span className="font-semibold text-[12px] tracking-wide">AI Comment Assistant</span>
+          <div className="flex items-center gap-3">
+            <Sparkles size={20} className="text-[#0a66c2]" />
+            <span className="font-bold text-[18px] tracking-wide">AI Comment Assistant</span>
           </div>
           <button 
             onClick={() => setIsOpen(false)}
-            className="p-1 rounded-full hover:bg-slate-200/20 text-slate-400 hover:text-slate-200 transition-colors"
+            className="p-1.5 rounded-full transition-colors hover:bg-[#00000008] text-[#5e5e5e]"
           >
-            <X size={16} />
+            <X size={20} />
           </button>
         </div>
 
         {/* Spacing & Length */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="flex flex-col gap-1.5">
-            <span className="text-[12px] font-medium tracking-wider text-slate-400 uppercase">Length</span>
-            <div className="flex bg-slate-200/10 p-0.5 rounded-lg border border-slate-200/5">
+        <div className="grid grid-cols-2 gap-5">
+          <div className="flex flex-col gap-2">
+            <span className={`text-[13px] font-bold tracking-wider uppercase ${secondaryTextClass}`}>Length</span>
+            <div className="flex p-1 rounded-md border bg-[#f4f2ee] border-[#e0e0e0]">
               {(['short', 'medium', 'long'] as CommentLength[]).map((l) => (
                 <button
                   key={l}
                   onClick={() => setSelectedLength(l)}
-                  className={`flex-1 py-1 rounded text-[22px] font-medium capitalize transition-all ${
+                  className={`flex-1 py-1 rounded-md text-[15px] font-semibold capitalize transition-all ${
                     selectedLength === l
-                      ? 'bg-indigo-600 text-white shadow'
-                      : 'text-slate-300 hover:bg-slate-200/5'
+                      ? 'bg-[#0a66c2] text-[#ffffff] shadow-sm'
+                      : 'text-[#5e5e5e] hover:bg-[#00000008]'
                   }`}
                 >
                   {l}
@@ -327,10 +342,10 @@ export default function FloatingPanel() {
           <div className="flex flex-col justify-end">
             <button
               onClick={() => setShowAdvanced(!showAdvanced)}
-              className="flex items-center justify-between px-3 py-1.5 rounded-lg border border-slate-200/10 bg-slate-200/5 hover:bg-slate-200/10 text-xs text-slate-300 transition-colors"
+              className="flex items-center justify-between px-4 py-2 rounded-md border text-[14px] font-semibold transition-all border-[#e0e0e0] bg-[#ffffff] text-[#5e5e5e] hover:bg-[#f4f2ee]"
             >
-              <span className="flex items-center gap-1"><Sliders size={12} /> Advanced</span>
-              {showAdvanced ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+              <span className="flex items-center gap-1.5"><Sliders size={15} /> Advanced</span>
+              {showAdvanced ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
             </button>
           </div>
         </div>
@@ -342,15 +357,15 @@ export default function FloatingPanel() {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="overflow-hidden flex flex-col gap-2 text-xs border-t border-b border-slate-200/5 py-2 text-slate-300"
+              className={`overflow-hidden flex flex-col gap-2 text-[14px] border-t border-b py-3 ${dividerClass} ${secondaryTextClass}`}
             >
               <div className="flex justify-between">
                 <span>Active Provider:</span>
-                <span className="font-semibold text-indigo-400 capitalize">{settings.selectedProvider}</span>
+                <span className="font-semibold capitalize text-[#0a66c2]">{settings.selectedProvider}</span>
               </div>
               <div className="flex justify-between">
                 <span>Model:</span>
-                <span className="font-mono text-[10px]">{settings.providers[settings.selectedProvider]?.model}</span>
+                <span className="font-mono text-[13px]">{settings.providers[settings.selectedProvider]?.model}</span>
               </div>
               {extractedData?.author && (
                 <div className="flex justify-between">
@@ -363,64 +378,68 @@ export default function FloatingPanel() {
         </AnimatePresence>
 
         {/* Custom Instruction */}
-        <div className="flex flex-col gap-1.5">
-          <span className="text-[11px] font-medium tracking-wider text-slate-400 uppercase">Custom Instruction (Optional)</span>
+        <div className="flex flex-col gap-2">
+          <span className={`text-[13px] font-bold tracking-wider uppercase ${secondaryTextClass}`}>Custom Instruction (Optional)</span>
           <input
             type="text"
             value={customInstruction}
             onChange={(e) => setCustomInstruction(e.target.value)}
-            placeholder="e.g. Congratulate them; reply as a senior backend developer..."
-            className="w-full px-3 py-1.5 rounded-lg border border-slate-200/10 bg-slate-200/5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
+            placeholder="e.g. Reply as a senior developer..."
+            className="w-full px-4 py-2 rounded-md border text-[15px] focus:outline-none focus:ring-1 transition-all border-[#e0e0e0] bg-[#ffffff] text-[#191919] focus:border-[#0a66c2] focus:ring-[#0a66c2]"
           />
         </div>
 
         {/* Generate Button / Output */}
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-4">
           <button
             onClick={handleGenerate}
             disabled={loading}
-            className="w-full py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50 text-white font-medium text-[20px] tracking-wide shadow-lg flex items-center justify-center gap-1.5 transition-all transform active:scale-98"
+            className={`w-full py-3 rounded-md font-bold text-[15px] shadow-sm transition-all flex items-center justify-center gap-2 active:scale-98 ${
+              loading 
+                ? 'opacity-65 cursor-not-allowed bg-[#0a66c2]' 
+                : 'bg-[#0a66c2] hover:bg-[#004182]'
+            } text-[#ffffff]`}
           >
             {loading ? (
-              <RotateCw size={14} className="animate-spin" />
+              <RotateCw size={16} className="animate-spin" />
             ) : (
-              <Sparkles size={14} />
+              <Sparkles size={16} />
             )}
-            {loading ? 'Analyzing post & generating...' : 'Generate Comment'}
+            {loading ? 'Generating comment...' : 'Generate Comment'}
           </button>
 
           {/* Error Message */}
           {error && (
-            <div className="p-3 rounded-lg border border-red-500/20 bg-red-500/10 text-xs text-red-300 flex gap-2 items-start">
-              <AlertCircle size={14} className="shrink-0 mt-0.5" />
+            <div className="p-4 rounded-md border border-red-500/20 bg-red-500/10 text-[14px] text-red-700 flex gap-2.5 items-start">
+              <AlertCircle size={16} className="shrink-0 mt-0.5" />
               <span>{error}</span>
             </div>
           )}
 
           {/* Generated Text Area */}
           {generatedComment && (
-            <div className="flex flex-col gap-2">
-              <span className="text-[11px] font-medium tracking-wider text-slate-400 uppercase">Draft Comment</span>
+            <div className="flex flex-col gap-2.5">
+              <span className={`text-[13px] font-bold tracking-wider uppercase ${secondaryTextClass}`}>Draft Comment</span>
               <textarea
                 value={generatedComment}
                 onChange={(e) => setGeneratedComment(e.target.value)}
-                rows={5} // Expanded text area
-                className="w-full px-3 py-2 rounded-xl border border-slate-200/10 bg-slate-200/5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 resize-y transition-colors font-sans leading-relaxed"
+                rows={6}
+                className="w-full px-4 py-3 rounded-md border text-[15px] focus:outline-none focus:ring-1 resize-y leading-relaxed border-[#e0e0e0] bg-[#ffffff] text-[#191919] focus:border-[#0a66c2] focus:ring-[#0a66c2]"
               />
-              <div className="flex gap-2 justify-end">
+              <div className="flex gap-3 justify-end mt-1">
                 <button
                   onClick={handleCopy}
-                  className="px-3 py-1.5 rounded-lg border border-slate-200/10 bg-slate-200/5 hover:bg-slate-200/10 text-xs text-slate-300 flex items-center gap-1.5 transition-colors"
+                  className="px-4 py-2 rounded-md border text-[14px] font-semibold flex items-center gap-2 transition-all border-[#0a66c2] text-[#0a66c2] hover:bg-[#0a66c2]/10"
                 >
-                  {copied ? <Check size={12} className="text-green-400" /> : <Copy size={12} />}
+                  {copied ? <Check size={14} /> : <Copy size={14} />}
                   {copied ? 'Copied!' : 'Copy'}
                 </button>
                 <button
                   onClick={handleInsert}
-                  className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                  className="px-5 py-2 rounded-md text-[14px] font-bold flex items-center gap-2 transition-all bg-[#0a66c2] text-[#ffffff] hover:bg-[#004182]"
                 >
-                  {inserted ? <Check size={12} className="text-green-200" /> : <FileInput size={12} />}
-                  {inserted ? 'Inserted!' : 'Insert into Editor'}
+                  {inserted ? <Check size={14} /> : <FileInput size={14} />}
+                  {inserted ? 'Inserted!' : 'Insert'}
                 </button>
               </div>
             </div>
