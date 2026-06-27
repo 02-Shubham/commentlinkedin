@@ -5,7 +5,6 @@ export interface GenerationParams {
   apiKey: string;
   model: string;
   postData: ExtractedPostData;
-  tone: CommentTone;
   length: CommentLength;
   customInstruction?: string;
   temperature: number;
@@ -102,7 +101,6 @@ export async function generateComment(
 ): Promise<string> {
   const { systemPrompt, userPrompt } = buildPrompt(
     params.postData,
-    params.tone,
     params.length,
     params.customInstruction
   );
@@ -200,7 +198,7 @@ async function callGroq(
   temperature: number,
   maxTokens: number
 ): Promise<string> {
-  const response = await fetch('https://api.groq.com/openapi/v1/chat/completions', {
+  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

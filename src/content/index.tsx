@@ -1,8 +1,10 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import FloatingPanel from './components/FloatingPanel';
-// Import Tailwind stylesheet inline as raw CSS text
-import tailwindStyles from '../styles/index.css?inline';
+
+// Base64 CSS placeholder that will be injected at build time and decoded at runtime
+const tailwindStylesBase64 = '__TAILWIND_CSS_PLACEHOLDER__';
+const tailwindStyles = atob(tailwindStylesBase64);
 
 // Custom event to communicate between injected buttons and our floating panel React app
 export interface TriggerEventDetail {

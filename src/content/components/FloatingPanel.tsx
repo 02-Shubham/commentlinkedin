@@ -2,11 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   X, Sparkles, Copy, Check, RotateCw, FileInput, 
-  MessageSquare, Sliders, ChevronDown, ChevronUp, AlertCircle 
+  Sliders, ChevronDown, ChevronUp, AlertCircle 
 } from 'lucide-react';
 import { useStore } from '../../store';
 import { extractPostData } from '../../utils/extractor';
-import { CommentTone, CommentLength, ExtractedPostData } from '../../types';
+import { CommentLength, ExtractedPostData } from '../../types';
 
 interface TriggerEventDetail {
   inputElement: HTMLElement;
@@ -27,7 +27,6 @@ export default function FloatingPanel() {
   const [activeInput, setActiveInput] = useState<HTMLElement | null>(null);
   
   // Generation parameters
-  const [selectedTone, setSelectedTone] = useState<CommentTone>('professional');
   const [selectedLength, setSelectedLength] = useState<CommentLength>('medium');
   const [customInstruction, setCustomInstruction] = useState('');
   
@@ -45,7 +44,6 @@ export default function FloatingPanel() {
   // Sync defaults from store settings once loaded
   useEffect(() => {
     if (settings) {
-      setSelectedTone(settings.defaultTone);
       setSelectedLength(settings.defaultLength);
     }
   }, [settings]);
@@ -132,7 +130,6 @@ export default function FloatingPanel() {
             apiKey: providerConfig.apiKey,
             model: providerConfig.model,
             postData: extractedData,
-            tone: selectedTone,
             length: selectedLength,
             customInstruction,
             temperature: settings.temperature,
@@ -148,7 +145,6 @@ export default function FloatingPanel() {
           postAuthor: extractedData.author,
           postText: extractedData.postText,
           generatedComment: response.comment,
-          tone: selectedTone,
           length: selectedLength,
           provider: settings.selectedProvider
         });
@@ -203,21 +199,6 @@ export default function FloatingPanel() {
   const isDark = settings.theme === 'dark' || (settings.theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
   const themeClass = isDark ? 'dark bg-slate-950 text-slate-100' : 'bg-white text-slate-800';
 
-  const tones: { label: string; value: CommentTone }[] = [
-    { label: '💼 Professional', value: 'professional' },
-    { label: '👋 Friendly', value: 'friendly' },
-    { label: '🎯 Straight', value: 'straight' },
-    { label: '💻 Technical', value: 'technical' },
-    { label: '💡 Thought Leader', value: 'thought-leader' },
-    { label: '🤔 Curious', value: 'curious' },
-    { label: '❤️ Supportive', value: 'supportive' },
-    { label: '🚀 Founder', value: 'founder' },
-    { label: '🔍 Recruiter', value: 'recruiter' },
-    { label: '🎓 Student', value: 'student' },
-    { label: '⚖️ Contrarian', value: 'contrarian' },
-    { label: '✨ Inspirational', value: 'inspirational' }
-  ];
-
   return (
     <div
       ref={panelRef}
@@ -246,26 +227,6 @@ export default function FloatingPanel() {
           >
             <X size={16} />
           </button>
-        </div>
-
-        {/* Tone Selector */}
-        <div className="flex flex-col gap-1.5">
-          <span className="text-[11px] font-medium tracking-wider text-slate-400 uppercase">Tone</span>
-          <div className="flex flex-wrap gap-1.5 max-h-[85px] overflow-y-auto pr-1">
-            {tones.map((t) => (
-              <button
-                key={t.value}
-                onClick={() => setSelectedTone(t.value)}
-                className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${
-                  selectedTone === t.value
-                    ? 'bg-indigo-600 text-white border-indigo-500 shadow-md scale-95'
-                    : 'bg-slate-200/10 text-slate-300 border-slate-200/5 hover:bg-slate-200/20'
-                }`}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
         </div>
 
         {/* Spacing & Length */}

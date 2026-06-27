@@ -1,19 +1,5 @@
 export type AIProviderName = 'gemini' | 'openai' | 'groq' | 'openrouter';
 
-export type CommentTone =
-  | 'professional'
-  | 'friendly'
-  | 'straight'
-  | 'technical'
-  | 'thought-leader'
-  | 'curious'
-  | 'supportive'
-  | 'founder'
-  | 'recruiter'
-  | 'student'
-  | 'contrarian'
-  | 'inspirational';
-
 export type CommentLength = 'short' | 'medium' | 'long';
 
 export interface ExtractedPostData {
@@ -30,7 +16,6 @@ export interface HistoryItem {
   postAuthor?: string;
   postText: string;
   generatedComment: string;
-  tone: CommentTone;
   length: CommentLength;
   provider: AIProviderName;
 }
@@ -43,7 +28,6 @@ export interface ProviderConfig {
 export interface AppSettings {
   selectedProvider: AIProviderName;
   providers: Record<AIProviderName, ProviderConfig>;
-  defaultTone: CommentTone;
   defaultLength: CommentLength;
   theme: 'light' | 'dark' | 'system';
   temperature: number;
@@ -55,7 +39,6 @@ export interface GenerateRequest {
   apiKey: string;
   model: string;
   postData: ExtractedPostData;
-  tone: CommentTone;
   length: CommentLength;
   customInstruction?: string;
   temperature: number;

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage, StateStorage } from 'zustand/middleware';
-import { AppSettings, HistoryItem, CommentTone, CommentLength, AIProviderName, ProviderConfig } from '../types';
+import { AppSettings, HistoryItem, CommentLength, AIProviderName, ProviderConfig } from '../types';
 
 // Custom storage adapter for chrome.storage.local
 const chromeStorageAdapter: StateStorage = {
@@ -48,7 +48,6 @@ const DEFAULT_SETTINGS: AppSettings = {
     groq: { apiKey: '', model: 'llama-3.3-70b-versatile' },
     openrouter: { apiKey: '', model: 'meta-llama/llama-3-8b-instruct:free' },
   },
-  defaultTone: 'professional',
   defaultLength: 'medium',
   theme: 'system',
   temperature: 0.7,
@@ -104,7 +103,7 @@ export const useStore = create<AppState>()(
       resetSettings: () => set({ settings: { ...DEFAULT_SETTINGS } }),
     }),
     {
-      name: 'linkedin-ai-comment-assistant-storage',
+      name: 'linkedin-ai-comment-assistant-storage-v2', // Updated key to force refresh
       storage: createJSONStorage(() => chromeStorageAdapter),
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);

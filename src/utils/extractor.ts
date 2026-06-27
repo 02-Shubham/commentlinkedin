@@ -1,19 +1,46 @@
 import { ExtractedPostData } from '../types';
 
 export function extractPostData(commentInput: HTMLElement): ExtractedPostData {
-  // Find the parent post container.
-  // LinkedIn feed items usually have feed-shared-update-v2 classes, article tags, 
-  // or data-urn/data-id attributes.
+  console.log('[AI Extractor] Starting extraction from editor element:', commentInput);
+
+  // 1. Find the parent post card wrapper by traversing up the DOM.
+  // We look for elements that mark a feed update card, or walk up until we find the root container.
   let parent: HTMLElement | null = commentInput;
-  while (parent && !parent.classList.contains('feed-shared-update-v2') && parent.tagName !== 'ARTICLE' && !parent.hasAttribute('data-urn')) {
+  let foundCard = false;
+
+  while (parent && parent !== document.body) {
+    // Check common LinkedIn post container triggers
+    if (
+      parent.hasAttribute('data-urn') || 
+      parent.hasAttribute('data-id') ||
+      parent.classList.contains('feed-shared-update-v2') ||
+      parent.classList.contains('update-outlet') ||
+      parent.classList.contains('occludable-update') ||
+      parent.tagName === 'ARTICLE' ||
+      parent.querySelector('[class*="actor__title"]') || 
+      parent.querySelector('a[href*="/in/"]:not(.comments-comment-meta__profile-link)')
+    ) {
+      // Confirm it's the full update card (must contain text content area and not just the comment container)
+      if (parent.querySelector('[class*="commentary" i], [class*="show-more-text" i], [class*="update-components-text" i]')) {
+        foundCard = true;
+        break;
+      }
+    }
     parent = parent.parentElement;
   }
 
-  if (!parent) {
-    // Fallback: search closest card or major section if parent post class changes
-    parent = commentInput.closest('.feed-shared-update-v2') || 
-             commentInput.closest('article') || 
-             commentInput.closest('.feed-shared-update-detail-vertical');
+  // Fallback: if walking up semantically failed, get the 7th parent (standard nesting height of comment box inside feed update card)
+  if (!foundCard || !parent) {
+    console.warn('[AI Extractor] Semantic card parent not found. Using fallback traversal.');
+    let fallbackParent = commentInput.parentElement;
+    for (let i = 0; i < 8 && fallbackParent; i++) {
+      if (fallbackParent.querySelector('[class*="commentary" i], [class*="show-more-text" i]')) {
+        parent = fallbackParent;
+        foundCard = true;
+        break;
+      }
+      fallbackParent = fallbackParent.parentElement;
+    }
   }
 
   const postData: ExtractedPostData = {
@@ -22,41 +49,43 @@ export function extractPostData(commentInput: HTMLElement): ExtractedPostData {
   };
 
   if (!parent) {
-    // If no parent found, search for visible text near the editor
+    console.error('[AI Extractor] Failed to find the parent post update container.');
     return postData;
   }
 
-  // 1. Extract Author Name
-  // Common LinkedIn selectors for actor title:
-  // - .update-components-actor__title
-  // - .feed-shared-actor__title
-  // - .feed-shared-actor__name
+  console.log('[AI Extractor] Identified parent post container:', parent);
+
+  // 2. Extract Author Name
+  // Walk through potential author selectors, prioritizing profile links outside the comment list
   const authorEl = parent.querySelector(
-    '.update-components-actor__title, .feed-shared-actor__title, .feed-shared-actor__name, [class*="actor__title"], [class*="actor__name"]'
+    '.update-components-actor__title, .feed-shared-actor__title, .feed-shared-actor__name, [class*="actor__title" i], [class*="actor__name" i]'
   );
+  
   if (authorEl) {
-    // Clean up text (remove suffix/prefix/pronouns like "• 1st" or "He/Him")
     let rawAuthor = (authorEl as HTMLElement).innerText || '';
     rawAuthor = rawAuthor.split('\n')[0].trim();
-    // Strip trailing degree connection info like " • 1st" or " • 2nd"
     postData.author = rawAuthor.replace(/\s*•\s*\d+\w*$/, '').trim();
+  } else {
+    // Fallback: look for the first profile link inside the post header
+    const profileLink = parent.querySelector('a[href*="/in/"]') as HTMLElement | null;
+    if (profileLink) {
+      postData.author = profileLink.innerText.split('\n')[0].trim();
+    }
   }
 
-  // 2. Extract Post Text
-  // Common LinkedIn selectors for post text:
-  // - .feed-shared-update-v2__commentary
-  // - .update-components-text
-  // - .feed-shared-inline-show-more-text
+  // 3. Extract Post Text
+  // Search using partial class match for commentary or text contents
   const textEl = parent.querySelector(
-    '.feed-shared-update-v2__commentary, .update-components-text, .feed-shared-inline-show-more-text, [class*="commentary"], [class*="show-more-text"]'
+    '[class*="commentary" i], [class*="show-more-text" i], [class*="update-components-text" i], [class*="feed-shared-text-view" i]'
   );
+
   if (textEl) {
     let rawText = (textEl as HTMLElement).innerText || '';
-    // Clean up "see more" or similar LinkedIn text triggers
+    // Clean up "see more" triggers
     rawText = rawText.replace(/\s*\.\.\.see\s+more$/i, '').trim();
     postData.postText = rawText;
 
-    // Extract hashtags dynamically from post text
+    // Extract hashtags
     const hashtagRegex = /#\w+/g;
     const matches = rawText.match(hashtagRegex);
     if (matches) {
@@ -64,24 +93,25 @@ export function extractPostData(commentInput: HTMLElement): ExtractedPostData {
     }
   }
 
-  // 3. Extract Media/Image description (alt text of images)
-  const imgEl = parent.querySelector('img.update-components-image__image, .update-components-article__description img, [class*="image__image"]') as HTMLImageElement | null;
-  if (imgEl && imgEl.alt && !imgEl.alt.startsWith('Photo') && !imgEl.alt.startsWith('Image')) {
+  // 4. Extract Media descriptions
+  const imgEl = parent.querySelector('img[class*="image__image" i], [class*="article__description" i] img') as HTMLImageElement | null;
+  if (imgEl && imgEl.alt && !/^(photo|image|picture)/i.test(imgEl.alt)) {
     postData.mediaDescription = imgEl.alt.trim();
   }
 
-  // 4. Extract Post URL
-  // We can try to build it from the URN (data-urn)
-  const urn = parent.getAttribute('data-urn');
+  // 5. Extract Post URL
+  const urn = parent.getAttribute('data-urn') || parent.getAttribute('data-id');
   if (urn) {
     postData.postUrl = `https://www.linkedin.com/feed/update/${urn}`;
-  } else {
-    // Fallback: look for a share link or control menu option link
-    const controlMenuLink = parent.querySelector('.feed-shared-control-menu__trigger, [class*="control-menu"]') as HTMLElement | null;
-    if (controlMenuLink) {
-      // Sometimes we can extract an ID or find direct links
-    }
   }
+
+  console.log('[AI Extractor] Extracted Post Data successfully:', {
+    author: postData.author,
+    textLength: postData.postText.length,
+    hashtagsCount: postData.hashtags.length,
+    hasMediaDescription: !!postData.mediaDescription,
+    preview: postData.postText.substring(0, 100) + '...'
+  });
 
   return postData;
 }

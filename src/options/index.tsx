@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { 
   Sparkles, Key, Sliders, History, Trash2, CheckCircle, 
-  XCircle, Save, HelpCircle, Eye, EyeOff, Moon, Sun, Monitor
+  XCircle, Save, Eye, EyeOff, Moon, Sun, Monitor
 } from 'lucide-react';
 import { useStore } from '../store';
 import { PROVIDERS_INFO, testProviderConnection } from '../services/providers';
-import { AIProviderName, CommentTone, CommentLength } from '../types';
+import { AIProviderName, CommentLength } from '../types';
 import '../styles/index.css';
 
 function OptionsApp() {
@@ -76,7 +76,6 @@ function OptionsApp() {
     setTestResult(prev => ({ ...prev, [provider]: null }));
 
     try {
-      // Direct call or runtime message
       const success = await testProviderConnection(provider, config.apiKey, config.model);
       setTestResult(prev => ({ ...prev, [provider]: success ? 'success' : 'failed' }));
     } catch {
@@ -89,21 +88,6 @@ function OptionsApp() {
   const toggleShowKey = (provider: AIProviderName) => {
     setShowKey(prev => ({ ...prev, [provider]: !prev[provider] }));
   };
-
-  const tones: { label: string; value: CommentTone }[] = [
-    { label: '💼 Professional', value: 'professional' },
-    { label: '👋 Friendly', value: 'friendly' },
-    { label: '🎯 Straight', value: 'straight' },
-    { label: '💻 Technical', value: 'technical' },
-    { label: '💡 Thought Leader', value: 'thought-leader' },
-    { label: '🤔 Curious', value: 'curious' },
-    { label: '❤️ Supportive', value: 'supportive' },
-    { label: '🚀 Founder', value: 'founder' },
-    { label: '🔍 Recruiter', value: 'recruiter' },
-    { label: '🎓 Student', value: 'student' },
-    { label: '⚖️ Contrarian', value: 'contrarian' },
-    { label: '✨ Inspirational', value: 'inspirational' }
-  ];
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 text-slate-800 dark:text-slate-100 font-sans">
@@ -176,7 +160,7 @@ function OptionsApp() {
 
               {/* Provider Radio Selector */}
               <div className="flex flex-col gap-2">
-                <span className="text-xs font-semibold text-slate-400">Active Provider Provider</span>
+                <span className="text-xs font-semibold text-slate-400">Active Provider</span>
                 <div className="grid grid-cols-4 gap-3">
                   {(Object.keys(PROVIDERS_INFO) as AIProviderName[]).map((p) => (
                     <button
@@ -284,22 +268,8 @@ function OptionsApp() {
               <div>
                 <h2 className="text-base font-semibold">Default Behavior Settings</h2>
                 <p className="text-xs text-slate-400 mt-1">
-                  Adjust default parameters for comment generation.
+                  Adjust default parameters for comment generation. The AI will automatically analyze each post to determine the most context-appropriate tone.
                 </p>
-              </div>
-
-              {/* Default Tone */}
-              <div className="flex flex-col gap-2">
-                <span className="text-xs font-semibold text-slate-400">Default Comment Tone</span>
-                <select
-                  value={settings.defaultTone}
-                  onChange={(e) => updateSettings({ defaultTone: e.target.value as CommentTone })}
-                  className="w-full bg-slate-900 border border-slate-200/10 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
-                >
-                  {tones.map((t) => (
-                    <option key={t.value} value={t.value}>{t.label}</option>
-                  ))}
-                </select>
               </div>
 
               {/* Default Length */}
@@ -423,8 +393,6 @@ function OptionsApp() {
                       {/* Header metadata */}
                       <div className="flex flex-wrap items-center gap-2 text-[10px] text-slate-400">
                         <span className="font-semibold text-indigo-400 uppercase capitalize">{h.provider}</span>
-                        <span>•</span>
-                        <span className="capitalize">Tone: {h.tone}</span>
                         <span>•</span>
                         <span className="capitalize">Length: {h.length}</span>
                         <span>•</span>

@@ -76,13 +76,31 @@ async function buildAll() {
 
   // Find the generated CSS file from the popup/options build and copy it to content.css
   const assetsDir = resolve(__dirname, 'dist/assets');
+  let compiledCssContent = '';
   if (fs.existsSync(assetsDir)) {
     const files = fs.readdirSync(assetsDir);
     const cssFile = files.find(f => f.endsWith('.css'));
     if (cssFile) {
       console.log(`Copying compiled CSS ${cssFile} to content.css...`);
-      fs.copyFileSync(resolve(assetsDir, cssFile), resolve(__dirname, 'dist/content.css'));
+      const cssPath = resolve(assetsDir, cssFile);
+      fs.copyFileSync(cssPath, resolve(__dirname, 'dist/content.css'));
+      compiledCssContent = fs.readFileSync(cssPath, 'utf8');
     }
+  }
+
+  // Inject compiled CSS into content.js placeholder
+  const contentJsPath = resolve(__dirname, 'dist/content.js');
+  if (fs.existsSync(contentJsPath) && compiledCssContent) {
+    console.log('Injecting compiled CSS (Base64 encoded) inside content.js...');
+    let jsContent = fs.readFileSync(contentJsPath, 'utf8');
+    
+    // Convert the compiled CSS directly to a safe Base64 string (no backslashes or newlines to escape!)
+    const base64Css = Buffer.from(compiledCssContent).toString('base64');
+      
+    // Use a callback function to prevent JavaScript's .replace() from expanding $ characters in the CSS
+    jsContent = jsContent.replace('__TAILWIND_CSS_PLACEHOLDER__', () => base64Css);
+    fs.writeFileSync(contentJsPath, jsContent, 'utf8');
+    console.log('Successfully injected compiled Base64 styles into content.js!');
   }
 
   console.log('Build completed successfully!');
