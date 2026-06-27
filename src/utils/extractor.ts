@@ -3,44 +3,18 @@ import { ExtractedPostData } from '../types';
 export function extractPostData(commentInput: HTMLElement): ExtractedPostData {
   console.log('[AI Extractor] Starting extraction from editor element:', commentInput);
 
-  // 1. Find the parent post card wrapper by traversing up the DOM.
-  // We look for elements that mark a feed update card, or walk up until we find the root container.
-  let parent: HTMLElement | null = commentInput;
-  let foundCard = false;
+  let parent = commentInput.parentElement;
+  let postTextEl: HTMLElement | null = null;
 
+  // 1. Climb up to find the closest ancestor containing the post commentary element.
+  // We identify it by looking for the stable data-testid="expandable-text-box" or componentkey="feed-commentary_..."
+  // while ensuring we don't accidentally stop inside a nested reply/comment item.
   while (parent && parent !== document.body) {
-    // Check common LinkedIn post container triggers
-    if (
-      parent.hasAttribute('data-urn') || 
-      parent.hasAttribute('data-id') ||
-      parent.classList.contains('feed-shared-update-v2') ||
-      parent.classList.contains('update-outlet') ||
-      parent.classList.contains('occludable-update') ||
-      parent.tagName === 'ARTICLE' ||
-      parent.querySelector('[class*="actor__title"]') || 
-      parent.querySelector('a[href*="/in/"]:not(.comments-comment-meta__profile-link)')
-    ) {
-      // Confirm it's the full update card (must contain text content area and not just the comment container)
-      if (parent.querySelector('[class*="commentary" i], [class*="show-more-text" i], [class*="update-components-text" i]')) {
-        foundCard = true;
-        break;
-      }
+    postTextEl = parent.querySelector('[data-testid="expandable-text-box"], [componentkey*="feed-commentary"]');
+    if (postTextEl && !parent.closest('.comments-comment-item')) {
+      break;
     }
     parent = parent.parentElement;
-  }
-
-  // Fallback: if walking up semantically failed, get the 7th parent (standard nesting height of comment box inside feed update card)
-  if (!foundCard || !parent) {
-    console.warn('[AI Extractor] Semantic card parent not found. Using fallback traversal.');
-    let fallbackParent = commentInput.parentElement;
-    for (let i = 0; i < 8 && fallbackParent; i++) {
-      if (fallbackParent.querySelector('[class*="commentary" i], [class*="show-more-text" i]')) {
-        parent = fallbackParent;
-        foundCard = true;
-        break;
-      }
-      fallbackParent = fallbackParent.parentElement;
-    }
   }
 
   const postData: ExtractedPostData = {
@@ -48,49 +22,43 @@ export function extractPostData(commentInput: HTMLElement): ExtractedPostData {
     hashtags: [],
   };
 
-  if (!parent) {
-    console.error('[AI Extractor] Failed to find the parent post update container.');
+  if (!parent || !postTextEl) {
+    console.error('[AI Extractor] Failed to find parent container or post text element.');
     return postData;
   }
 
   console.log('[AI Extractor] Identified parent post container:', parent);
 
   // 2. Extract Author Name
-  // Walk through potential author selectors, prioritizing profile links outside the comment list
-  const authorEl = parent.querySelector(
-    '.update-components-actor__title, .feed-shared-actor__title, .feed-shared-actor__name, [class*="actor__title" i], [class*="actor__name" i]'
-  );
-  
-  if (authorEl) {
-    let rawAuthor = (authorEl as HTMLElement).innerText || '';
-    rawAuthor = rawAuthor.split('\n')[0].trim();
-    postData.author = rawAuthor.replace(/\s*•\s*\d+\w*$/, '').trim();
-  } else {
-    // Fallback: look for the first profile link inside the post header
-    const profileLink = parent.querySelector('a[href*="/in/"]') as HTMLElement | null;
-    if (profileLink) {
+  // We look for a profile link. The profile image alt tag "View [Name]’s profile" is the most stable source.
+  const profileLink = parent.querySelector('a[href*="/in/"]:not([class*="comment" i])') as HTMLAnchorElement | null;
+  if (profileLink) {
+    const profileImg = profileLink.querySelector('img');
+    if (profileImg && profileImg.alt) {
+      // Clean "View Sundas Khalid’s profile" -> "Sundas Khalid"
+      postData.author = profileImg.alt
+        .replace(/^View /i, '')
+        .replace(/[’']s profile/i, '')
+        .trim();
+    } else {
       postData.author = profileLink.innerText.split('\n')[0].trim();
     }
   }
 
   // 3. Extract Post Text
-  // Search using partial class match for commentary or text contents
-  const textEl = parent.querySelector(
-    '[class*="commentary" i], [class*="show-more-text" i], [class*="update-components-text" i], [class*="feed-shared-text-view" i]'
-  );
+  let rawText = postTextEl.innerText || '';
+  
+  // Clean up "see more" or translation triggers
+  rawText = rawText.replace(/\s*\.\.\.see\s+more$/i, '')
+                   .replace(/\s*\.\.\.see\s+translation$/i, '')
+                   .trim();
+  postData.postText = rawText;
 
-  if (textEl) {
-    let rawText = (textEl as HTMLElement).innerText || '';
-    // Clean up "see more" triggers
-    rawText = rawText.replace(/\s*\.\.\.see\s+more$/i, '').trim();
-    postData.postText = rawText;
-
-    // Extract hashtags
-    const hashtagRegex = /#\w+/g;
-    const matches = rawText.match(hashtagRegex);
-    if (matches) {
-      postData.hashtags = matches.map(tag => tag.substring(1));
-    }
+  // Extract hashtags
+  const hashtagRegex = /#\w+/g;
+  const matches = rawText.match(hashtagRegex);
+  if (matches) {
+    postData.hashtags = matches.map(tag => tag.substring(1));
   }
 
   // 4. Extract Media descriptions
@@ -105,7 +73,7 @@ export function extractPostData(commentInput: HTMLElement): ExtractedPostData {
     postData.postUrl = `https://www.linkedin.com/feed/update/${urn}`;
   }
 
-  console.log('[AI Extractor] Extracted Post Data successfully:', {
+  console.log('[AI Extractor] Final Extracted Post Data:', {
     author: postData.author,
     textLength: postData.postText.length,
     hashtagsCount: postData.hashtags.length,
