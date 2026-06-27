@@ -203,6 +203,12 @@ export default function FloatingPanel() {
     setInserted(false);
     setCopied(false);
 
+    if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.sendMessage) {
+      setError('Extension connection lost. Please refresh the LinkedIn page to re-establish the connection.');
+      setLoading(false);
+      return;
+    }
+
     try {
       const response = await chrome.runtime.sendMessage({
         type: 'generate-comment',
@@ -321,13 +327,13 @@ export default function FloatingPanel() {
         {/* Spacing & Length */}
         <div className="grid grid-cols-2 gap-5">
           <div className="flex flex-col gap-2">
-            <span className={`text-[13px] font-bold tracking-wider uppercase ${secondaryTextClass}`}>Length</span>
-            <div className="flex p-1 rounded-md border bg-[#f4f2ee] border-[#e0e0e0]">
+            <span className={`text-[12px] font-bold tracking-wider uppercase ${secondaryTextClass}`}>Length</span>
+            <div className="flex p-2 rounded-md border bg-[#f4f2ee] border-[#e0e0e0]">
               {(['short', 'medium', 'long'] as CommentLength[]).map((l) => (
                 <button
                   key={l}
                   onClick={() => setSelectedLength(l)}
-                  className={`flex-1 py-1 rounded-md text-[15px] font-semibold capitalize transition-all ${
+                  className={`flex-1 py-2 rounded-md text-[13px] font-semibold capitalize transition-all ${
                     selectedLength === l
                       ? 'bg-[#0a66c2] text-[#ffffff] shadow-sm'
                       : 'text-[#5e5e5e] hover:bg-[#00000008]'
@@ -379,13 +385,13 @@ export default function FloatingPanel() {
 
         {/* Custom Instruction */}
         <div className="flex flex-col gap-2">
-          <span className={`text-[13px] font-bold tracking-wider uppercase ${secondaryTextClass}`}>Custom Instruction (Optional)</span>
+          <span className={`text-[12px] font-bold tracking-wider uppercase ${secondaryTextClass}`}>Custom Instruction (Optional)</span>
           <input
             type="text"
             value={customInstruction}
             onChange={(e) => setCustomInstruction(e.target.value)}
             placeholder="e.g. Reply as a senior developer..."
-            className="w-full px-4 py-2 rounded-md border text-[15px] focus:outline-none focus:ring-1 transition-all border-[#e0e0e0] bg-[#ffffff] text-[#191919] focus:border-[#0a66c2] focus:ring-[#0a66c2]"
+            className="w-full px-4 py-2 rounded-md border text-[12px] focus:outline-none focus:ring-1 transition-all border-[#e0e0e0] bg-[#ffffff] text-[#191919] focus:border-[#0a66c2] focus:ring-[#0a66c2]"
           />
         </div>
 
