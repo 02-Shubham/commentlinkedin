@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage, StateStorage } from 'zustand/middleware';
-import { AppSettings, HistoryItem, CommentLength, AIProviderName, ProviderConfig } from '../types';
+import { AppSettings, HistoryItem, AIProviderName, ProviderConfig } from '../types';
 
 // Custom storage adapter for chrome.storage.local
 const chromeStorageAdapter: StateStorage = {

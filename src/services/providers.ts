@@ -1,4 +1,4 @@
-import { AIProviderName, ExtractedPostData, CommentTone, CommentLength } from '../types';
+import { AIProviderName, ExtractedPostData, CommentLength } from '../types';
 import { buildPrompt } from '../prompts';
 
 export interface GenerationParams {
