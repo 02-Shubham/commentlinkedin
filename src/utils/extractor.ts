@@ -31,7 +31,9 @@ export function extractPostData(commentInput: HTMLElement): ExtractedPostData {
 
   // 2. Extract Author Name
   // We look for a profile link. The profile image alt tag "View [Name]’s profile" is the most stable source.
-  const profileLink = parent.querySelector('a[href*="/in/"]:not([class*="comment" i])') as HTMLAnchorElement | null;
+  // We query within the actor/author container first to avoid social headers (e.g. "Devyani Chavan commented") at the top of the card.
+  const actorContainer = parent.querySelector('.update-components-actor, .feed-shared-actor, [class*="actor" i]');
+  const profileLink = (actorContainer || parent).querySelector('a[href*="/in/"]:not([class*="comment" i])') as HTMLAnchorElement | null;
   if (profileLink) {
     const profileImg = profileLink.querySelector('img');
     if (profileImg && profileImg.alt) {
