@@ -34,10 +34,22 @@ ${postData.postText}
 """
 ${postData.mediaDescription ? `Visual Media Description: ${postData.mediaDescription}\n` : ''}
 ${postData.hashtags.length > 0 ? `Post Hashtags: ${postData.hashtags.join(', ')}\n` : ''}
+${postData.hasImages ? `Post contains ${postData.imageCount} image(s).\n` : ''}
 
 Generate a comment with the following specifications:
 1. Length: ${LENGTH_TEMPLATES[length]}
 `;
+
+  const isSparse = (!postData.postText || postData.postText.trim().length < 20);
+  if (isSparse) {
+    userPrompt += `
+CRITICAL INSTRUCTION FOR SPARSE/NO TEXT POSTS:
+- The post has very little or no commentary/text. 
+- If a "Visual Media Description" is provided above, comment constructively on the shared visual content or theme.
+- If there is no visual description, write a friendly, professional, and positive comment appropriate for a LinkedIn post (e.g. praising their share, expressing positive interest, or congratulating them if the author/context suggests an achievement or update).
+- Under no circumstances should you say "No content to comment on." or state that you cannot generate a comment. Write a real, encouraging, and engaging comment.
+`;
+  }
 
   if (customInstruction && customInstruction.trim().length > 0) {
     userPrompt += `\n2. Additional Custom Instructions (override tone or topic if requested here):

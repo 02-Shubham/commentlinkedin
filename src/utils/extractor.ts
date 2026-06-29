@@ -3,31 +3,27 @@ import { ExtractedPostData } from '../types';
 export function extractPostData(commentInput: HTMLElement): ExtractedPostData {
   console.log('[AI Extractor] Starting extraction from editor element:', commentInput);
 
-  let parent = commentInput.parentElement;
-  let postTextEl: HTMLElement | null = null;
-
-  // 1. Climb up to find the closest ancestor containing the post commentary element.
-  // We identify it by looking for the stable data-testid="expandable-text-box" or componentkey="feed-commentary_..."
-  // while ensuring we don't accidentally stop inside a nested reply/comment item.
-  while (parent && parent !== document.body) {
-    postTextEl = parent.querySelector('[data-testid="expandable-text-box"], [componentkey*="feed-commentary"]');
-    if (postTextEl && !parent.closest('.comments-comment-item')) {
-      break;
-    }
-    parent = parent.parentElement;
-  }
+  // 1. Climb up to find the closest ancestor representing the entire post card/container.
+  const parent = commentInput.closest('.feed-shared-update-v2, [data-urn], .occludable-update, article, .feed-shared-update') as HTMLElement | null;
 
   const postData: ExtractedPostData = {
     postText: '',
     hashtags: [],
+    hasImages: false,
+    imageCount: 0,
   };
 
-  if (!parent || !postTextEl) {
-    console.error('[AI Extractor] Failed to find parent container or post text element.');
+  if (!parent) {
+    console.error('[AI Extractor] Failed to find parent post container.');
     return postData;
   }
 
   console.log('[AI Extractor] Identified parent post container:', parent);
+
+  // Find post commentary element (expandable text box or component keys/classes)
+  const postTextEl = parent.querySelector(
+    '[data-testid="expandable-text-box"], [componentkey*="feed-commentary"], .feed-shared-update-v2__commentary, .update-components-text, .feed-shared-inline-show-more-text'
+  ) as HTMLElement | null;
 
   // 2. Extract Author Name
   // We look for a profile link. The profile image alt tag "View [Name]’s profile" is the most stable source.
@@ -48,12 +44,14 @@ export function extractPostData(commentInput: HTMLElement): ExtractedPostData {
   }
 
   // 3. Extract Post Text
-  let rawText = postTextEl.innerText || '';
-  
-  // Clean up "see more" or translation triggers
-  rawText = rawText.replace(/\s*\.\.\.see\s+more$/i, '')
-                   .replace(/\s*\.\.\.see\s+translation$/i, '')
-                   .trim();
+  let rawText = '';
+  if (postTextEl) {
+    rawText = postTextEl.innerText || '';
+    // Clean up "see more" or translation triggers
+    rawText = rawText.replace(/\s*\.\.\.see\s+more$/i, '')
+                     .replace(/\s*\.\.\.see\s+translation$/i, '')
+                     .trim();
+  }
   postData.postText = rawText;
 
   // Extract hashtags
@@ -64,10 +62,29 @@ export function extractPostData(commentInput: HTMLElement): ExtractedPostData {
   }
 
   // 4. Extract Media descriptions
-  const imgEl = parent.querySelector('img[class*="image__image" i], [class*="article__description" i] img') as HTMLImageElement | null;
-  if (imgEl && imgEl.alt && !/^(photo|image|picture)/i.test(imgEl.alt)) {
-    postData.mediaDescription = imgEl.alt.trim();
+  const mediaImgEls = parent.querySelectorAll(
+    'img[class*="image__image" i], [class*="update-components-image" i] img, .feed-shared-image__container img, .update-components-article__image img, .update-components-carousel img, [class*="update-components-multiple-images" i] img, [class*="carousel" i] img'
+  );
+
+  const cleanedAlts: string[] = [];
+  mediaImgEls.forEach((imgEl) => {
+    const img = imgEl as HTMLImageElement;
+    const alt = img.getAttribute('alt') || '';
+    const trimmed = alt.trim();
+    if (trimmed) {
+      const isGeneric = /^(photo|image|picture|thumbnail|preview)$/i.test(trimmed) || 
+                        /^(no photo description|no alternative text)/i.test(trimmed);
+      if (!isGeneric) {
+        cleanedAlts.push(trimmed);
+      }
+    }
+  });
+
+  if (cleanedAlts.length > 0) {
+    postData.mediaDescription = cleanedAlts.join('; ');
   }
+  postData.hasImages = mediaImgEls.length > 0;
+  postData.imageCount = mediaImgEls.length;
 
   // 5. Extract Post URL
   const urn = parent.getAttribute('data-urn') || parent.getAttribute('data-id');
@@ -80,6 +97,8 @@ export function extractPostData(commentInput: HTMLElement): ExtractedPostData {
     textLength: postData.postText.length,
     hashtagsCount: postData.hashtags.length,
     hasMediaDescription: !!postData.mediaDescription,
+    hasImages: postData.hasImages,
+    imageCount: postData.imageCount,
     preview: postData.postText.substring(0, 100) + '...'
   });
 

@@ -8,6 +8,8 @@ export interface ExtractedPostData {
   hashtags: string[];
   mediaDescription?: string;
   postUrl?: string;
+  hasImages?: boolean;
+  imageCount?: number;
 }
 
 export interface HistoryItem {
